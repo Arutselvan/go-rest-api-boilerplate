@@ -1,0 +1,943 @@
+basePath: /
+definitions:
+  auth.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.TokenPairResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  errors.ErrorInfo:
+    properties:
+      code:
+        type: string
+      details: {}
+      message:
+        type: string
+      path:
+        type: string
+      request_id:
+        type: string
+      retry_after:
+        type: integer
+      timestamp:
+        type: string
+    type: object
+  errors.Links:
+    properties:
+      first:
+        type: string
+      last:
+        type: string
+      next:
+        type: string
+      prev:
+        type: string
+      self:
+        type: string
+    type: object
+  errors.Meta:
+    properties:
+      links:
+        $ref: '#/definitions/errors.Links'
+      page:
+        type: integer
+      per_page:
+        type: integer
+      request_id:
+        type: string
+      timestamp:
+        type: string
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  errors.Response:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/errors.ErrorInfo'
+      meta:
+        $ref: '#/definitions/errors.Meta'
+      success:
+        type: boolean
+    type: object
+  health.CheckResult:
+    properties:
+      details: {}
+      message:
+        type: string
+      response_time:
+        type: string
+      status:
+        $ref: '#/definitions/health.CheckStatus'
+    type: object
+  health.CheckStatus:
+    enum:
+    - pass
+    - warn
+    - fail
+    type: string
+    x-enum-varnames:
+    - CheckPass
+    - CheckWarn
+    - CheckFail
+  health.HealthResponse:
+    properties:
+      checks:
+        additionalProperties:
+          $ref: '#/definitions/health.CheckResult'
+        type: object
+      environment:
+        type: string
+      status:
+        $ref: '#/definitions/health.HealthStatus'
+      timestamp:
+        type: string
+      uptime:
+        type: string
+      version:
+        type: string
+    type: object
+  health.HealthStatus:
+    enum:
+    - healthy
+    - degraded
+    - unhealthy
+    type: string
+    x-enum-varnames:
+    - StatusHealthy
+    - StatusDegraded
+    - StatusUnhealthy
+  user.AuthResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      user:
+        $ref: '#/definitions/user.UserResponse'
+    type: object
+  user.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  user.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  user.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+    type: object
+  user.UserListResponse:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/user.UserResponse'
+        type: array
+    type: object
+  user.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: A production-ready REST API boilerplate in Go with JWT authentication
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Go REST API Boilerplate
+  version: "1.0"
+paths:
+  /api/v1/admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of all users with optional filtering (requires
+        admin role)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page (max 100)
+        in: query
+        name: per_page
+        type: integer
+      - description: Filter by role (user or admin)
+        in: query
+        name: role
+        type: string
+      - description: Search by name or email
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: Sort by field (created_at, updated_at, name, email)
+        in: query
+        name: sort
+        type: string
+      - default: desc
+        description: Sort order (asc or desc)
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with paginated user list
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserListResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Admin access required
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to list users
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List all users (Admin only)
+      tags:
+      - admin
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password, returns access and refresh
+        tokens
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with user data and tokens
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.AuthResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Invalid email or password
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to authenticate user or generate token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Login user
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revoke refresh token and invalidate user session
+      parameters:
+      - description: Refresh token to revoke
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged out
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  type: object
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Token does not belong to user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to logout
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Logout user
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Get the currently authenticated user's information with roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with current user data
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to get user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange refresh token for new access and refresh tokens with automatic
+        rotation
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with new token pair
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.TokenPairResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Token reuse detected - all tokens revoked
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to refresh token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Refresh access token
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with name, email and password, returns access
+        and refresh tokens
+      parameters:
+      - description: Registration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with user data and tokens
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.AuthResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "409":
+          description: Email already exists
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to register user or generate token
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /api/v1/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user by ID (requires authentication)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "429":
+          description: Rate limit exceeded
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to delete user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Get a user by their ID (requires authentication)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with user data
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "429":
+          description: Rate limit exceeded
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to get user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update user information (requires authentication)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response with updated user data
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserResponse'
+                success:
+                  type: boolean
+              type: object
+        "400":
+          description: Invalid user ID or Validation error
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "403":
+          description: Forbidden user ID
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "404":
+          description: User not found
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "409":
+          description: Email already exists
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "429":
+          description: Rate limit exceeded
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+        "500":
+          description: Failed to update user
+          schema:
+            allOf:
+            - $ref: '#/definitions/errors.Response'
+            - properties:
+                error:
+                  $ref: '#/definitions/errors.ErrorInfo'
+                success:
+                  type: boolean
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - users
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Check if the application is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+      summary: Basic health check
+      tags:
+      - Health
+  /health/live:
+    get:
+      consumes:
+      - application/json
+      description: Check if the application is alive (not deadlocked)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+      summary: Liveness probe
+      tags:
+      - Health
+  /health/ready:
+    get:
+      consumes:
+      - application/json
+      description: Check if the application and its dependencies are ready to serve
+        traffic
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is ready
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+        "503":
+          description: Service is not ready
+          schema:
+            $ref: '#/definitions/health.HealthResponse'
+      summary: Readiness probe
+      tags:
+      - Health
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
